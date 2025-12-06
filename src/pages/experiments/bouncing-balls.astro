@@ -5,7 +5,10 @@ import Layout from "../../layouts/Layout.astro";
 <Layout title="Bouncing Balls | Physics Experiments">
   <div class="canvas-container">
     <canvas id="simulation"></canvas>
-    <div class="controls">
+    <button id="toggle-controls" class="toggle-btn" title="Toggle Controls">
+      ☰
+    </button>
+    <div class="controls" id="controls-panel">
       <h1>Bouncing Balls</h1>
       <p>Balls spawn on collision. Click to reset.</p>
       <div class="control-group">
@@ -24,8 +27,11 @@ import Layout from "../../layouts/Layout.astro";
       </div>
 
       <div class="actions">
-        <button id="reset-btn">Reset</button>
-        <a href="/" class="back-link">← Back</a>
+        <div class="action-buttons">
+          <button id="reset-btn">Reset</button>
+          <button id="fullscreen-btn" title="Toggle Fullscreen">⛶</button>
+        </div>
+        <a href="/" class="back-link">← Back to Home</a>
       </div>
     </div>
   </div>
@@ -46,6 +52,35 @@ import Layout from "../../layouts/Layout.astro";
     display: block;
   }
 
+  .toggle-btn {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    padding: 0;
+  }
+
+  .toggle-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
   .controls {
     position: absolute;
     top: 2rem;
@@ -57,6 +92,30 @@ import Layout from "../../layouts/Layout.astro";
     border: 1px solid var(--glass-border);
     pointer-events: auto;
     max-width: 300px;
+    transition:
+      transform 0.3s ease,
+      opacity 0.3s ease;
+    z-index: 99;
+  }
+
+  .controls.hidden {
+    transform: translateX(-120%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Hide controls in fullscreen */
+  :fullscreen .controls,
+  :-webkit-full-screen .controls {
+    transform: translateX(-120%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  :fullscreen .toggle-btn,
+  :-webkit-full-screen .toggle-btn {
+    opacity: 0;
+    pointer-events: none;
   }
 
   h1 {
@@ -97,8 +156,13 @@ import Layout from "../../layouts/Layout.astro";
 
   .actions {
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
   }
 
   button {
@@ -108,6 +172,7 @@ import Layout from "../../layouts/Layout.astro";
     padding: 0.5rem 1rem;
     border-radius: 6px;
     font-weight: 600;
+    cursor: pointer;
     transition: background 0.3s;
   }
 
@@ -115,15 +180,24 @@ import Layout from "../../layouts/Layout.astro";
     background: var(--accent-light);
   }
 
+  #fullscreen-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 1.1rem;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  #fullscreen-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
   .back-link {
-    font-size: 0.9rem;
-    color: white;
-    opacity: 0.7;
-    transition: opacity 0.3s;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    transition: color 0.3s;
   }
 
   .back-link:hover {
-    opacity: 1;
+    color: white;
   }
 </style>
 
@@ -385,4 +459,65 @@ import Layout from "../../layouts/Layout.astro";
   animate();
 
   document.getElementById("reset-btn")?.addEventListener("click", init);
+
+  // Toggle controls visibility
+  const toggleBtn = document.getElementById("toggle-controls");
+  const controlsPanel = document.getElementById("controls-panel");
+
+  // Fullscreen functionality
+  const fullscreenBtn = document.getElementById("fullscreen-btn");
+  const canvasContainer = document.querySelector(
+    ".canvas-container",
+  ) as HTMLElement;
+
+  fullscreenBtn?.addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+      canvasContainer?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  });
+
+  // Listen for fullscreen changes (F11, system shortcuts, etc.)
+  document.addEventListener("fullscreenchange", () => {
+    console.log("Fullscreen changed");
+    if (document.fullscreenElement) {
+      // Entering fullscreen - hide controls
+      controlsPanel?.classList.add("hidden");
+      toggleBtn?.classList.remove("visible");
+    } else {
+      // Exiting fullscreen - show controls
+      controlsPanel?.classList.remove("hidden");
+      toggleBtn?.classList.remove("visible");
+    }
+  });
+
+  toggleBtn?.addEventListener("click", () => {
+    controlsPanel?.classList.toggle("hidden");
+    toggleBtn?.classList.toggle("visible");
+  });
+
+  // Show toggle button when controls are hidden
+  controlsPanel?.addEventListener("transitionend", () => {
+    if (
+      controlsPanel.classList.contains("hidden") &&
+      !document.fullscreenElement
+    ) {
+      toggleBtn?.classList.add("visible");
+    }
+  });
+
+  // Add a small hide button inside controls
+  const hideBtn = document.createElement("button");
+  hideBtn.id = "hide-controls-btn";
+  hideBtn.innerHTML = "×";
+  hideBtn.title = "Hide Controls";
+  hideBtn.style.cssText =
+    "position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.25rem 0.5rem; font-size: 1rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer;";
+  controlsPanel?.appendChild(hideBtn);
+
+  hideBtn.addEventListener("click", () => {
+    controlsPanel?.classList.add("hidden");
+    toggleBtn?.classList.add("visible");
+  });
 </script>
