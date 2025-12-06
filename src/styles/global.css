@@ -1,13 +1,14 @@
 :root {
-	--bg-color: #050505;
-	--text-primary: #ffffff;
-	--text-secondary: #a0a0a0;
-	--accent-color: #7b2cbf;
-	--accent-light: #9d4edd;
-	--surface-color: #121212;
-	--border-color: #333333;
-	--glass-bg: rgba(255, 255, 255, 0.05);
-	--glass-border: rgba(255, 255, 255, 0.1);
+	--bg-color: #242423;
+	--text-primary: #cfdbd5;
+	--text-secondary: #e8eddf;
+	--accent-color: #f5cb5c;
+	--accent-light: #f7d78c;
+	--surface-color: #333533;
+	--border-color: #444; 
+	--glass-bg: rgba(51, 53, 51, 0.5); 
+	--glass-border: rgba(207, 219, 213, 0.1);
+	--shadow-color: rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -45,11 +46,11 @@ body {
 	position: absolute;
 	border-radius: 50%;
 	filter: blur(80px);
-	opacity: 0.4;
+	opacity: 0.3;
 }
 
 .globe-1 {
-	background: var(--accent-color);
+	background: var(--tuscan-sun);
 	width: 500px;
 	height: 500px;
 	top: -100px;
@@ -58,12 +59,13 @@ body {
 }
 
 .globe-2 {
-	background: #3a0ca3;
+	background: var(--graphite); /* Subtle dark globe */
 	width: 600px;
 	height: 600px;
 	bottom: -150px;
 	right: -150px;
 	animation: float 25s infinite ease-in-out reverse;
+	opacity: 0.5;
 }
 
 @keyframes float {

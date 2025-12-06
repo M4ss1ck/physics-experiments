@@ -241,10 +241,10 @@ import Layout from "../../layouts/Layout.astro";
     balls = [];
     // Start with 2 balls
     balls.push(
-      new Ball(containerCenter.x - 50, containerCenter.y - 100, 15, "#4cc9f0"),
+      new Ball(containerCenter.x - 50, containerCenter.y - 100, 15, "#33a1fd"),
     );
     balls.push(
-      new Ball(containerCenter.x + 50, containerCenter.y - 100, 15, "#f72585"),
+      new Ball(containerCenter.x + 50, containerCenter.y - 100, 15, "#2176ff"),
     );
     updateStats();
   }
@@ -321,7 +321,7 @@ import Layout from "../../layouts/Layout.astro";
     if (now - lastSpawnTime < 200) return;
     if (balls.length >= maxBallsLimit) return;
 
-    const colors = ["#4cc9f0", "#f72585", "#7209b7", "#3a0ca3"];
+    const colors = ["#2176ff", "#33a1fd", "#fdca40", "#f79824"];
     const color = colors[Math.floor(Math.random() * colors.length)];
 
     const r = 10 + Math.random() * 10;
@@ -340,9 +340,11 @@ import Layout from "../../layouts/Layout.astro";
   }
 
   function animate() {
-    ctx.fillStyle = "rgba(5, 5, 5, 0.3)";
+    // Trail effect using Carbon Black base
+    ctx.fillStyle = "rgba(36, 36, 35, 0.3)";
     ctx.fillRect(0, 0, width, height);
 
+    // Draw Container
     ctx.beginPath();
     ctx.arc(
       containerCenter.x,
@@ -351,7 +353,7 @@ import Layout from "../../layouts/Layout.astro";
       0,
       Math.PI * 2,
     );
-    ctx.strokeStyle = "#333";
+    ctx.strokeStyle = "#333533"; // Graphite for subtle container border
     ctx.lineWidth = 5;
     ctx.stroke();
     ctx.closePath();

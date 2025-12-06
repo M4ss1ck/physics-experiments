@@ -44,7 +44,11 @@ import Layout from "../layouts/Layout.astro";
 	}
 
 	.text-gradient {
-		background: linear-gradient(45deg, var(--accent-light), #4cc9f0);
+		background: linear-gradient(
+			45deg,
+			var(--accent-color),
+			var(--accent-light)
+		);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
@@ -67,12 +71,14 @@ import Layout from "../layouts/Layout.astro";
 		position: relative;
 		background: var(--glass-bg);
 		border: 1px solid var(--glass-border);
+		box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3); /* Dark shadow */
 		border-radius: 16px;
 		padding: 2rem;
 		overflow: hidden;
 		transition:
 			transform 0.3s ease,
-			border-color 0.3s ease;
+			border-color 0.3s ease,
+			box-shadow 0.3s ease;
 		backdrop-filter: blur(10px);
 		display: block;
 	}
@@ -80,6 +86,7 @@ import Layout from "../layouts/Layout.astro";
 	.card:not(.disabled):hover {
 		transform: translateY(-5px);
 		border-color: var(--accent-light);
+		box-shadow: 0 8px 40px rgba(245, 203, 92, 0.1); /* Subtle yellow glow */
 	}
 
 	.card-content {
@@ -90,6 +97,7 @@ import Layout from "../layouts/Layout.astro";
 	.card h2 {
 		font-size: 1.5rem;
 		margin-bottom: 0.5rem;
+		color: var(--text-primary);
 	}
 
 	.card p {
@@ -100,7 +108,7 @@ import Layout from "../layouts/Layout.astro";
 
 	.arrow {
 		font-size: 1.5rem;
-		color: var(--accent-light);
+		color: var(--accent-color);
 		transition: transform 0.3s ease;
 	}
 
@@ -116,7 +124,7 @@ import Layout from "../layouts/Layout.astro";
 		height: 100%;
 		background: radial-gradient(
 			circle at top right,
-			rgba(123, 44, 191, 0.1),
+			rgba(245, 203, 92, 0.1),
 			transparent 60%
 		);
 		opacity: 0;
