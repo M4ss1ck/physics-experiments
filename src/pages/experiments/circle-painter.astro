@@ -1,0 +1,434 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="Circle Painter | Physics Experiments">
+  <div class="canvas-container">
+    <canvas id="simulation"></canvas>
+    <div class="controls">
+      <h1>Circle Painter</h1>
+      <p>The ball paints the circle as it bounces. New color on each fill.</p>
+      <div class="control-group">
+        <label for="speed-slider">Speed</label>
+        <input
+          type="range"
+          id="speed-slider"
+          min="0.1"
+          max="2"
+          step="0.1"
+          value="1"
+        />
+        <div class="stats">
+          Coverage: <span id="coverage">0</span>% | Color: <span
+            id="color-count">1</span
+          >
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="reset-btn">Reset</button>
+        <a href="/" class="back-link">← Back</a>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+  }
+
+  .controls {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    pointer-events: auto;
+    max-width: 300px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent-light);
+  }
+
+  p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+  }
+
+  .control-group {
+    margin-bottom: 1.5rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent-color);
+    margin-bottom: 0.5rem;
+  }
+
+  .stats {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  button {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: background 0.3s;
+  }
+
+  button:hover {
+    background: var(--accent-light);
+  }
+
+  .back-link {
+    font-size: 0.9rem;
+    color: white;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+  }
+
+  .back-link:hover {
+    opacity: 1;
+  }
+</style>
+
+<script>
+  // Simulation State
+  let timeScale = 1;
+
+  const paintColors = [
+    "#ff6b6b",
+    "#feca57",
+    "#48dbfb",
+    "#1dd1a1",
+    "#5f27cd",
+    "#ff9ff3",
+    "#54a0ff",
+    "#00d2d3",
+    "#ff9f43",
+    "#ee5a24",
+  ];
+  let currentColorIndex = 0;
+  let colorCount = 1;
+
+  // Ball is always white for visibility
+  const ballColor = "#ffffff";
+
+  class Ball {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    radius: number;
+    trail: { x: number; y: number }[] = [];
+
+    constructor(x: number, y: number, r: number) {
+      this.x = x;
+      this.y = y;
+      this.radius = r;
+      // Init velocity
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 5 + Math.random() * 3;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+    }
+
+    draw(ctx: CanvasRenderingContext2D) {
+      // Draw ball with glow effect for visibility
+      ctx.shadowColor = ballColor;
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = ballColor;
+      ctx.fill();
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.closePath();
+      ctx.shadowBlur = 0;
+    }
+
+    update() {
+      // Store trail
+      this.trail.push({ x: this.x, y: this.y });
+      if (this.trail.length > 5) {
+        this.trail.shift();
+      }
+
+      this.x += this.vx * timeScale;
+      this.y += this.vy * timeScale;
+    }
+
+    // Add randomness on bounce
+    randomizeBounce() {
+      const randomAngle = (Math.random() - 0.5) * 0.5; // +/- 0.25 radians
+      const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+      const currentAngle = Math.atan2(this.vy, this.vx);
+      const newAngle = currentAngle + randomAngle;
+      this.vx = Math.cos(newAngle) * speed;
+      this.vy = Math.sin(newAngle) * speed;
+    }
+  }
+
+  const canvas = document.getElementById("simulation") as HTMLCanvasElement;
+  const ctx = canvas.getContext("2d")!;
+  const coverageEl = document.getElementById("coverage") as HTMLSpanElement;
+  const colorCountEl = document.getElementById(
+    "color-count",
+  ) as HTMLSpanElement;
+
+  // Offscreen canvas for current color layer paint tracking
+  let paintCanvas: HTMLCanvasElement;
+  let paintCtx: CanvasRenderingContext2D;
+
+  // Background canvas to store previous color layers
+  let backgroundCanvas: HTMLCanvasElement;
+  let backgroundCtx: CanvasRenderingContext2D;
+
+  let width = window.innerWidth;
+  let height = window.innerHeight;
+  let ball: Ball;
+
+  // Container configuration
+  let containerRadius = Math.min(width, height) * 0.4;
+  let containerCenter = { x: width / 2, y: height / 2 };
+
+  // Paint brush size (how thick the paint trail is)
+  const brushSize = 25;
+
+  // Track pixels that need to be painted for current layer
+  let totalCirclePixels = 0;
+
+  // Setup UI
+  const speedSlider = document.getElementById(
+    "speed-slider",
+  ) as HTMLInputElement;
+  speedSlider?.addEventListener("input", (e) => {
+    timeScale = parseFloat((e.target as HTMLInputElement).value);
+  });
+
+  function updateStats(coverage: number) {
+    if (coverageEl) coverageEl.textContent = Math.floor(coverage).toString();
+    if (colorCountEl) colorCountEl.textContent = colorCount.toString();
+  }
+
+  // Setup Canvas
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    containerCenter.x = width / 2;
+    containerCenter.y = height / 2;
+    containerRadius = Math.min(width, height) * 0.4;
+
+    // Setup background canvas (stores previous color layers)
+    backgroundCanvas = document.createElement("canvas");
+    backgroundCanvas.width = width;
+    backgroundCanvas.height = height;
+    backgroundCtx = backgroundCanvas.getContext("2d")!;
+
+    // Setup current layer paint canvas
+    paintCanvas = document.createElement("canvas");
+    paintCanvas.width = width;
+    paintCanvas.height = height;
+    paintCtx = paintCanvas.getContext("2d")!;
+
+    // Initialize with transparent background
+    paintCtx.clearRect(0, 0, width, height);
+
+    // Calculate total pixels in circle for coverage
+    totalCirclePixels = Math.PI * containerRadius * containerRadius;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function init() {
+    currentColorIndex = 0;
+    colorCount = 1;
+    ball = new Ball(containerCenter.x, containerCenter.y - 50, 15);
+
+    // Clear both canvases
+    paintCtx.clearRect(0, 0, width, height);
+    backgroundCtx.clearRect(0, 0, width, height);
+    updateStats(0);
+  }
+
+  function checkContainerCollision(ball: Ball): boolean {
+    const dx = ball.x - containerCenter.x;
+    const dy = ball.y - containerCenter.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance + ball.radius > containerRadius) {
+      const nx = dx / distance;
+      const ny = dy / distance;
+
+      ball.x = containerCenter.x + nx * (containerRadius - ball.radius);
+      ball.y = containerCenter.y + ny * (containerRadius - ball.radius);
+
+      const dot = ball.vx * nx + ball.vy * ny;
+      ball.vx = ball.vx - 2 * dot * nx;
+      ball.vy = ball.vy - 2 * dot * ny;
+
+      // Add randomness to bounce direction
+      ball.randomizeBounce();
+
+      return true;
+    }
+    return false;
+  }
+
+  function paintTrail() {
+    // Paint where the ball has been with current color
+    const currentColor = paintColors[currentColorIndex];
+    paintCtx.fillStyle = currentColor;
+    paintCtx.beginPath();
+    paintCtx.arc(ball.x, ball.y, brushSize, 0, Math.PI * 2);
+    paintCtx.fill();
+
+    // Also paint the trail for smoother coverage
+    for (const point of ball.trail) {
+      paintCtx.beginPath();
+      paintCtx.arc(point.x, point.y, brushSize, 0, Math.PI * 2);
+      paintCtx.fill();
+    }
+  }
+
+  function calculateCoverage(): number {
+    // Sample the current paint layer canvas to calculate coverage within the circle
+    const imageData = paintCtx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    let paintedPixels = 0;
+    let totalPixels = 0;
+
+    // Sample every 3rd pixel for better accuracy
+    const step = 3;
+    for (let y = 0; y < height; y += step) {
+      for (let x = 0; x < width; x += step) {
+        // Check if this pixel is inside the circle (with margin for edge)
+        const dx = x - containerCenter.x;
+        const dy = y - containerCenter.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < containerRadius - brushSize) {
+          totalPixels++;
+          // Check alpha channel (index 3 of each pixel)
+          const i = (y * width + x) * 4;
+          if (data[i + 3] > 100) {
+            paintedPixels++;
+          }
+        }
+      }
+    }
+
+    return totalPixels > 0 ? (paintedPixels / totalPixels) * 100 : 0;
+  }
+
+  function switchColor() {
+    // First, merge current paint layer onto background
+    backgroundCtx.drawImage(paintCanvas, 0, 0);
+
+    // Then clear current layer for new color
+    paintCtx.clearRect(0, 0, width, height);
+
+    // Switch to next color
+    currentColorIndex = (currentColorIndex + 1) % paintColors.length;
+    colorCount++;
+  }
+
+  let frameCount = 0;
+
+  function animate() {
+    // Clear main canvas
+    ctx.fillStyle = "#242423";
+    ctx.fillRect(0, 0, width, height);
+
+    // Draw Container
+    ctx.beginPath();
+    ctx.arc(
+      containerCenter.x,
+      containerCenter.y,
+      containerRadius,
+      0,
+      Math.PI * 2,
+    );
+    ctx.strokeStyle = "#333533";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.closePath();
+
+    // Update ball
+    ball.update();
+    checkContainerCollision(ball);
+
+    // Paint the trail
+    paintTrail();
+
+    // Draw the background (previous color layers)
+    ctx.drawImage(backgroundCanvas, 0, 0);
+
+    // Draw the current paint layer on top
+    ctx.drawImage(paintCanvas, 0, 0);
+
+    // Draw the ball on top (always visible)
+    ball.draw(ctx);
+
+    // Calculate coverage every 30 frames
+    frameCount++;
+    if (frameCount % 30 === 0) {
+      const coverage = calculateCoverage();
+      updateStats(coverage);
+
+      // Switch at 98% coverage for true "full" coverage
+      if (coverage >= 98) {
+        switchColor();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  init();
+  animate();
+
+  document.getElementById("reset-btn")?.addEventListener("click", init);
+</script>
