@@ -1,0 +1,386 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="Bouncing Balls | Physics Experiments">
+  <div class="canvas-container">
+    <canvas id="simulation"></canvas>
+    <div class="controls">
+      <h1>Bouncing Balls</h1>
+      <p>Balls spawn on collision. Click to reset.</p>
+      <div class="control-group">
+        <label for="speed-slider">Speed</label>
+        <input
+          type="range"
+          id="speed-slider"
+          min="0.1"
+          max="2"
+          step="0.1"
+          value="0.5"
+        />
+        <div class="stats">
+          Balls: <span id="ball-count">2</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="reset-btn">Reset</button>
+        <a href="/" class="back-link">← Back</a>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+  }
+
+  .controls {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    pointer-events: auto;
+    max-width: 300px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent-light);
+  }
+
+  p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+  }
+
+  .control-group {
+    margin-bottom: 1.5rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent-color);
+    margin-bottom: 0.5rem;
+  }
+
+  .stats {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  button {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: background 0.3s;
+  }
+
+  button:hover {
+    background: var(--accent-light);
+  }
+
+  .back-link {
+    font-size: 0.9rem;
+    color: white;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+  }
+
+  .back-link:hover {
+    opacity: 1;
+  }
+</style>
+
+<script>
+  // Simulation State
+  let timeScale = 0.5;
+
+  class Ball {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    radius: number;
+    color: string;
+    mass: number;
+
+    constructor(x: number, y: number, r: number, color: string) {
+      this.x = x;
+      this.y = y;
+      this.radius = r;
+      this.color = color;
+      // Init velocity
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 4 + Math.random() * 2;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+      this.mass = r;
+    }
+
+    draw(ctx: CanvasRenderingContext2D) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    update() {
+      // Apply timeScale to ALL motion calculations
+      this.x += this.vx * timeScale;
+      this.y += this.vy * timeScale;
+
+      // Gravity
+      this.vy += 0.05 * timeScale;
+
+      // Friction - remove air resistance
+      this.vx *= 1.0;
+      this.vy *= 1.0;
+
+      // Cap max speed
+      const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+      if (speed > 15) {
+        const scale = 15 / speed;
+        this.vx *= scale;
+        this.vy *= scale;
+      }
+    }
+  }
+
+  const canvas = document.getElementById("simulation") as HTMLCanvasElement;
+  const ctx = canvas.getContext("2d")!;
+  const ballCountEl = document.getElementById("ball-count") as HTMLSpanElement;
+  const maxBallsEl = document.getElementById("max-balls") as HTMLSpanElement;
+
+  let width = window.innerWidth;
+  let height = window.innerHeight;
+  let balls: Ball[] = [];
+
+  // Container configuration
+  let containerRadius = Math.min(width, height) * 0.4;
+  let containerCenter = { x: width / 2, y: height / 2 };
+  let maxBallsLimit = 100;
+
+  // Setup UI
+  const speedSlider = document.getElementById(
+    "speed-slider",
+  ) as HTMLInputElement;
+  speedSlider?.addEventListener("input", (e) => {
+    timeScale = parseFloat((e.target as HTMLInputElement).value);
+  });
+
+  function updateStats() {
+    if (ballCountEl) ballCountEl.textContent = balls.length.toString();
+    if (maxBallsEl)
+      maxBallsEl.textContent = Math.floor(maxBallsLimit).toString();
+  }
+
+  function calculateMaxBalls() {
+    // Area of container: PI * R^2
+    const containerArea = Math.PI * containerRadius * containerRadius;
+    // Average ball radius ~15. Area: PI * 15^2 ~ 700
+    const avgBallArea = Math.PI * 15 * 15;
+    // Packing factor 0.7 for "loose" packing allowing movement
+    maxBallsLimit = (containerArea * 0.7) / avgBallArea;
+    updateStats();
+  }
+
+  // Setup Canvas
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    containerCenter.x = width / 2;
+    containerCenter.y = height / 2;
+    containerRadius = Math.min(width, height) * 0.4;
+
+    calculateMaxBalls();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function init() {
+    balls = [];
+    // Start with 2 balls
+    balls.push(
+      new Ball(containerCenter.x - 50, containerCenter.y - 100, 15, "#4cc9f0"),
+    );
+    balls.push(
+      new Ball(containerCenter.x + 50, containerCenter.y - 100, 15, "#f72585"),
+    );
+    updateStats();
+  }
+
+  function checkContainerCollision(ball: Ball) {
+    const dx = ball.x - containerCenter.x;
+    const dy = ball.y - containerCenter.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance + ball.radius > containerRadius) {
+      const nx = dx / distance;
+      const ny = dy / distance;
+
+      ball.x = containerCenter.x + nx * (containerRadius - ball.radius);
+      ball.y = containerCenter.y + ny * (containerRadius - ball.radius);
+
+      const dot = ball.vx * nx + ball.vy * ny;
+      ball.vx = ball.vx - 2 * dot * nx;
+      ball.vy = ball.vy - 2 * dot * ny;
+
+      // INCREASE energy slightly on wall bounce to prevent death?
+      // Or just perfect elasticity (1.0).
+      // Let's use 1.0 to keep energy constant-ish.
+      ball.vx *= 1.0;
+      ball.vy *= 1.0;
+    }
+  }
+
+  function checkBallCollision(b1: Ball, b2: Ball) {
+    const dx = b2.x - b1.x;
+    const dy = b2.y - b1.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < b1.radius + b2.radius) {
+      const overlap = (b1.radius + b2.radius - distance) / 2;
+      const nx = dx / distance;
+      const ny = dy / distance;
+
+      b1.x -= nx * overlap;
+      b1.y -= ny * overlap;
+      b2.x += nx * overlap;
+      b2.y += ny * overlap;
+
+      const tx = -ny;
+      const ty = nx;
+
+      const dpTan1 = b1.vx * tx + b1.vy * ty;
+      const dpTan2 = b2.vx * tx + b2.vy * ty;
+
+      const dpNorm1 = b1.vx * nx + b1.vy * ny;
+      const dpNorm2 = b2.vx * nx + b2.vy * ny;
+
+      const m1 =
+        (dpNorm1 * (b1.mass - b2.mass) + 2 * b2.mass * dpNorm2) /
+        (b1.mass + b2.mass);
+      const m2 =
+        (dpNorm2 * (b2.mass - b1.mass) + 2 * b1.mass * dpNorm1) /
+        (b1.mass + b2.mass);
+
+      b1.vx = tx * dpTan1 + nx * m1;
+      b1.vy = ty * dpTan1 + ny * m1;
+      b2.vx = tx * dpTan2 + nx * m2;
+      b2.vy = ty * dpTan2 + ny * m2;
+
+      return true;
+    }
+    return false;
+  }
+
+  let lastSpawnTime = 0;
+
+  function spawnBall() {
+    const now = Date.now();
+    if (now - lastSpawnTime < 200) return;
+    if (balls.length >= maxBallsLimit) return;
+
+    const colors = ["#4cc9f0", "#f72585", "#7209b7", "#3a0ca3"];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+
+    const r = 10 + Math.random() * 10;
+    const newBall = new Ball(
+      containerCenter.x,
+      containerCenter.y - 100,
+      r,
+      color,
+    );
+    newBall.vx = (Math.random() - 0.5) * 2;
+    newBall.vy = 0;
+
+    balls.push(newBall);
+    lastSpawnTime = now;
+    updateStats();
+  }
+
+  function animate() {
+    ctx.fillStyle = "rgba(5, 5, 5, 0.3)";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.beginPath();
+    ctx.arc(
+      containerCenter.x,
+      containerCenter.y,
+      containerRadius,
+      0,
+      Math.PI * 2,
+    );
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.closePath();
+
+    const subSteps = 4;
+    for (let s = 0; s < subSteps; s++) {
+      balls.forEach((ball) => {
+        ball.update();
+        checkContainerCollision(ball);
+      });
+
+      // Collision Loop
+      // Optimization: grid-based or quadtree? for 50 balls n^2 is fine.
+      for (let i = 0; i < balls.length; i++) {
+        for (let j = i + 1; j < balls.length; j++) {
+          if (checkBallCollision(balls[i], balls[j])) {
+            spawnBall();
+          }
+        }
+      }
+    }
+
+    balls.forEach((ball) => ball.draw(ctx));
+
+    requestAnimationFrame(animate);
+  }
+
+  init();
+  animate();
+
+  document.getElementById("reset-btn")?.addEventListener("click", init);
+</script>

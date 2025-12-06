@@ -1,0 +1,95 @@
+:root {
+	--bg-color: #050505;
+	--text-primary: #ffffff;
+	--text-secondary: #a0a0a0;
+	--accent-color: #7b2cbf;
+	--accent-light: #9d4edd;
+	--surface-color: #121212;
+	--border-color: #333333;
+	--glass-bg: rgba(255, 255, 255, 0.05);
+	--glass-border: rgba(255, 255, 255, 0.1);
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html {
+	font-family: 'Outfit', sans-serif;
+	background-color: var(--bg-color);
+	color: var(--text-primary);
+	overflow-x: hidden;
+}
+
+body {
+	min-height: 100vh;
+	position: relative;
+	overflow-x: hidden;
+}
+
+/* Abstract Background Globes */
+.background-globes {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: -1;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.globe {
+	position: absolute;
+	border-radius: 50%;
+	filter: blur(80px);
+	opacity: 0.4;
+}
+
+.globe-1 {
+	background: var(--accent-color);
+	width: 500px;
+	height: 500px;
+	top: -100px;
+	left: -100px;
+	animation: float 20s infinite ease-in-out;
+}
+
+.globe-2 {
+	background: #3a0ca3;
+	width: 600px;
+	height: 600px;
+	bottom: -150px;
+	right: -150px;
+	animation: float 25s infinite ease-in-out reverse;
+}
+
+@keyframes float {
+	0%, 100% { transform: translate(0, 0); }
+	50% { transform: translate(50px, 50px); }
+}
+
+main {
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 2rem;
+	position: relative;
+}
+
+h1, h2, h3 {
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+a {
+	color: inherit;
+	text-decoration: none;
+}
+
+button {
+	font-family: inherit;
+	cursor: pointer;
+}

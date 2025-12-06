@@ -1,16 +1,145 @@
 ---
-
+import Layout from "../layouts/Layout.astro";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout title="Physics Experiments">
+	<div class="hero">
+		<h1>Physics <span class="text-gradient">Experiments</span></h1>
+		<p class="subtitle">
+			A collection of satisfying, visually driven simulations.
+		</p>
+	</div>
+
+	<div class="experiments-grid">
+		<a href="/experiments/bouncing-balls" class="card">
+			<div class="card-content">
+				<h2>Bouncing Balls</h2>
+				<p>Watch balls collide and multiply in a satisfying chaotic loop.</p>
+				<div class="arrow">→</div>
+			</div>
+			<div class="card-bg"></div>
+		</a>
+
+		<!-- Placeholder for future experiments -->
+		<div class="card disabled">
+			<div class="card-content">
+				<h2>Coming Soon</h2>
+				<p>More experiments are under development.</p>
+			</div>
+		</div>
+	</div>
+</Layout>
+
+<style>
+	.hero {
+		text-align: center;
+		padding: 4rem 0 6rem;
+		animation: fadeIn 1s ease-out;
+	}
+
+	h1 {
+		font-size: 4rem;
+		margin-bottom: 1rem;
+		letter-spacing: -2px;
+	}
+
+	.text-gradient {
+		background: linear-gradient(45deg, var(--accent-light), #4cc9f0);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	.subtitle {
+		font-size: 1.5rem;
+		color: var(--text-secondary);
+		font-weight: 300;
+	}
+
+	.experiments-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 2rem;
+		padding: 0 1rem;
+	}
+
+	.card {
+		position: relative;
+		background: var(--glass-bg);
+		border: 1px solid var(--glass-border);
+		border-radius: 16px;
+		padding: 2rem;
+		overflow: hidden;
+		transition:
+			transform 0.3s ease,
+			border-color 0.3s ease;
+		backdrop-filter: blur(10px);
+		display: block;
+	}
+
+	.card:not(.disabled):hover {
+		transform: translateY(-5px);
+		border-color: var(--accent-light);
+	}
+
+	.card-content {
+		position: relative;
+		z-index: 10;
+	}
+
+	.card h2 {
+		font-size: 1.5rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.card p {
+		color: var(--text-secondary);
+		margin-bottom: 1.5rem;
+		line-height: 1.5;
+	}
+
+	.arrow {
+		font-size: 1.5rem;
+		color: var(--accent-light);
+		transition: transform 0.3s ease;
+	}
+
+	.card:hover .arrow {
+		transform: translateX(10px);
+	}
+
+	.card-bg {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: radial-gradient(
+			circle at top right,
+			rgba(123, 44, 191, 0.1),
+			transparent 60%
+		);
+		opacity: 0;
+		transition: opacity 0.3s ease;
+	}
+
+	.card:hover .card-bg {
+		opacity: 1;
+	}
+
+	.card.disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+</style>
