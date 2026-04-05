@@ -1,0 +1,462 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="Spirograph Classic | Physics Experiments">
+  <div class="canvas-container">
+    <canvas id="simulation"></canvas>
+    <button id="toggle-controls" class="toggle-btn" title="Toggle Controls">
+      ☰
+    </button>
+    <div class="controls" id="controls-panel">
+      <h1>Spirograph Classic</h1>
+      <p>A wheel rolling inside another traces a hypotrochoid curve.</p>
+      <div class="control-group">
+        <label for="ratio-slider"
+          >Ratio (k): <span id="ratio-value">8.3</span></label
+        >
+        <input
+          type="range"
+          id="ratio-slider"
+          min="2"
+          max="12"
+          step="0.1"
+          value="8.3"
+        />
+      </div>
+      <div class="control-group">
+        <label for="offset-slider"
+          >Pen offset: <span id="offset-value">0.80</span></label
+        >
+        <input
+          type="range"
+          id="offset-slider"
+          min="0.1"
+          max="1"
+          step="0.05"
+          value="0.8"
+        />
+      </div>
+      <div class="control-group">
+        <label for="speed-slider">Speed: <span id="speed-value">2</span></label>
+        <input
+          type="range"
+          id="speed-slider"
+          min="1"
+          max="15"
+          step="1"
+          value="2"
+        />
+      </div>
+
+      <div class="actions">
+        <div class="action-buttons">
+          <button id="reset-btn">Reset</button>
+          <button id="fullscreen-btn" title="Toggle Fullscreen">⛶</button>
+        </div>
+        <a href="/" class="back-link">← Back to Home</a>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+  }
+
+  .toggle-btn {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    padding: 0;
+  }
+
+  .toggle-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .controls {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    pointer-events: auto;
+    max-width: 300px;
+    transition:
+      transform 0.3s ease,
+      opacity 0.3s ease;
+    z-index: 99;
+  }
+
+  .controls.hidden {
+    transform: translateX(-120%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Hide controls in fullscreen */
+  :fullscreen .controls,
+  :-webkit-full-screen .controls {
+    transform: translateX(-120%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  :fullscreen .toggle-btn,
+  :-webkit-full-screen .toggle-btn {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent-light);
+  }
+
+  p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+  }
+
+  .control-group {
+    margin-bottom: 1.5rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent-color);
+    margin-bottom: 0.5rem;
+  }
+
+  .stats {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  button {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  button:hover {
+    background: var(--accent-light);
+  }
+
+  #fullscreen-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 1.1rem;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  #fullscreen-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .back-link {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    transition: color 0.3s;
+  }
+
+  .back-link:hover {
+    color: white;
+  }
+</style>
+
+<script>
+  const canvas = document.getElementById("simulation") as HTMLCanvasElement;
+  const ctx = canvas.getContext("2d")!;
+
+  // Offscreen canvas for accumulated curve
+  const curveCanvas = document.createElement("canvas");
+  const curveCtx = curveCanvas.getContext("2d")!;
+
+  // Controls
+  const ratioSlider = document.getElementById(
+    "ratio-slider",
+  ) as HTMLInputElement;
+  const offsetSlider = document.getElementById(
+    "offset-slider",
+  ) as HTMLInputElement;
+  const speedSlider = document.getElementById(
+    "speed-slider",
+  ) as HTMLInputElement;
+  const ratioValue = document.getElementById("ratio-value") as HTMLSpanElement;
+  const offsetValue = document.getElementById(
+    "offset-value",
+  ) as HTMLSpanElement;
+  const speedValue = document.getElementById("speed-value") as HTMLSpanElement;
+
+  let width = window.innerWidth;
+  let height = window.innerHeight;
+
+  // Spirograph parameters
+  let k = 8.3;
+  let penFrac = 0.8;
+  let stepsPerFrame = 2;
+  let t = 0;
+  let prevX = 0;
+  let prevY = 0;
+
+  // Derived dimensions
+  let R = 0;
+  let r = 0;
+  let d = 0;
+  let cx = 0;
+  let cy = 0;
+
+  const dt = 0.02;
+
+  function computeDerived() {
+    cx = width / 2;
+    cy = height / 2;
+    R = Math.min(width, height) * 0.4;
+    r = R / k;
+    d = penFrac * r;
+  }
+
+  function spirographPoint(t: number): { x: number; y: number } {
+    const diff = R - r;
+    const ratio = diff / r;
+    return {
+      x: cx + diff * Math.cos(t) + d * Math.cos(ratio * t),
+      y: cy + diff * Math.sin(t) - d * Math.sin(ratio * t),
+    };
+  }
+
+  // Inner wheel center position
+  function innerWheelCenter(t: number): { x: number; y: number } {
+    const diff = R - r;
+    return {
+      x: cx + diff * Math.cos(t),
+      y: cy + diff * Math.sin(t),
+    };
+  }
+
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    curveCanvas.width = width;
+    curveCanvas.height = height;
+    reset();
+  }
+
+  function reset() {
+    computeDerived();
+    t = 0;
+
+    // Clear offscreen curve canvas
+    curveCtx.fillStyle = "#000";
+    curveCtx.fillRect(0, 0, width, height);
+
+    const p0 = spirographPoint(0);
+    prevX = p0.x;
+    prevY = p0.y;
+  }
+
+  function animate() {
+    // Advance the curve on the offscreen canvas
+    curveCtx.lineWidth = 1.5;
+    for (let i = 0; i < stepsPerFrame; i++) {
+      t += dt;
+      const p = spirographPoint(t);
+      const hue = (t * 50) % 360;
+      curveCtx.strokeStyle = `hsl(${hue}, 80%, 60%)`;
+      curveCtx.beginPath();
+      curveCtx.moveTo(prevX, prevY);
+      curveCtx.lineTo(p.x, p.y);
+      curveCtx.stroke();
+      prevX = p.x;
+      prevY = p.y;
+    }
+
+    // Draw everything to main canvas
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, width, height);
+
+    // Blit accumulated curve
+    ctx.drawImage(curveCanvas, 0, 0);
+
+    // Draw outer fixed circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Draw inner rolling circle and pen arm
+    const wc = innerWheelCenter(t);
+    const pen = spirographPoint(t);
+
+    // Inner circle
+    ctx.beginPath();
+    ctx.arc(wc.x, wc.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Arm from inner circle center to pen
+    ctx.beginPath();
+    ctx.moveTo(wc.x, wc.y);
+    ctx.lineTo(pen.x, pen.y);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Inner circle center dot
+    ctx.beginPath();
+    ctx.arc(wc.x, wc.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+    ctx.fill();
+
+    // Pen dot
+    ctx.beginPath();
+    ctx.arc(pen.x, pen.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+
+    requestAnimationFrame(animate);
+  }
+
+  // Slider listeners
+  ratioSlider.addEventListener("input", (e) => {
+    k = parseFloat((e.target as HTMLInputElement).value);
+    ratioValue.textContent = k.toFixed(1);
+    reset();
+  });
+
+  offsetSlider.addEventListener("input", (e) => {
+    penFrac = parseFloat((e.target as HTMLInputElement).value);
+    offsetValue.textContent = penFrac.toFixed(2);
+    reset();
+  });
+
+  speedSlider.addEventListener("input", (e) => {
+    stepsPerFrame = parseInt((e.target as HTMLInputElement).value);
+    speedValue.textContent = stepsPerFrame.toString();
+  });
+
+  window.addEventListener("resize", resize);
+  resize();
+  animate();
+
+  // Reset button
+  document.getElementById("reset-btn")?.addEventListener("click", reset);
+
+  // Toggle controls visibility
+  const toggleBtn = document.getElementById("toggle-controls");
+  const controlsPanel = document.getElementById("controls-panel");
+
+  const fullscreenBtn = document.getElementById("fullscreen-btn");
+  const canvasContainer = document.querySelector(
+    ".canvas-container",
+  ) as HTMLElement;
+
+  fullscreenBtn?.addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+      canvasContainer?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  });
+
+  document.addEventListener("fullscreenchange", () => {
+    if (document.fullscreenElement) {
+      controlsPanel?.classList.add("hidden");
+      toggleBtn?.classList.remove("visible");
+    } else {
+      controlsPanel?.classList.remove("hidden");
+      toggleBtn?.classList.remove("visible");
+    }
+  });
+
+  toggleBtn?.addEventListener("click", () => {
+    controlsPanel?.classList.toggle("hidden");
+    toggleBtn?.classList.toggle("visible");
+  });
+
+  controlsPanel?.addEventListener("transitionend", () => {
+    if (
+      controlsPanel.classList.contains("hidden") &&
+      !document.fullscreenElement
+    ) {
+      toggleBtn?.classList.add("visible");
+    }
+  });
+
+  const hideBtn = document.createElement("button");
+  hideBtn.id = "hide-controls-btn";
+  hideBtn.innerHTML = "×";
+  hideBtn.title = "Hide Controls";
+  hideBtn.style.cssText =
+    "position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.25rem 0.5rem; font-size: 1rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer;";
+  controlsPanel?.appendChild(hideBtn);
+
+  hideBtn.addEventListener("click", () => {
+    controlsPanel?.classList.add("hidden");
+    toggleBtn?.classList.add("visible");
+  });
+</script>

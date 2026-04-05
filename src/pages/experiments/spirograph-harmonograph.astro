@@ -1,0 +1,542 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="Spirograph Harmonograph | Physics Experiments">
+  <div class="canvas-container">
+    <canvas id="simulation"></canvas>
+    <button id="toggle-controls" class="toggle-btn" title="Toggle Controls">
+      ☰
+    </button>
+    <div class="controls" id="controls-panel">
+      <h1>Spirograph Harmonograph</h1>
+      <p>
+        Two pendulums trace decaying Lissajous-like curves.
+      </p>
+      <div class="control-group">
+        <label for="freq-slider"
+          >Frequency ratio: <span id="freq-value">2.01</span></label
+        >
+        <input
+          type="range"
+          id="freq-slider"
+          min="1"
+          max="5"
+          step="0.01"
+          value="2.01"
+        />
+      </div>
+      <div class="control-group">
+        <label for="amp-slider"
+          >Amplitude balance: <span id="amp-value">0.75</span></label
+        >
+        <input
+          type="range"
+          id="amp-slider"
+          min="0.2"
+          max="1"
+          step="0.05"
+          value="0.75"
+        />
+      </div>
+      <div class="control-group">
+        <label for="phase-slider"
+          >Phase offset: <span id="phase-value">90</span>°</label
+        >
+        <input
+          type="range"
+          id="phase-slider"
+          min="0"
+          max="360"
+          step="5"
+          value="90"
+        />
+      </div>
+      <div class="control-group">
+        <label for="damping-slider"
+          >Damping: <span id="damping-value">0.002</span></label
+        >
+        <input
+          type="range"
+          id="damping-slider"
+          min="0"
+          max="0.01"
+          step="0.001"
+          value="0.002"
+        />
+      </div>
+      <div class="control-group">
+        <label for="speed-slider">Speed: <span id="speed-value">2</span></label>
+        <input
+          type="range"
+          id="speed-slider"
+          min="1"
+          max="15"
+          step="1"
+          value="2"
+        />
+      </div>
+
+      <div class="actions">
+        <div class="action-buttons">
+          <button id="reset-btn">Reset</button>
+          <button id="fullscreen-btn" title="Toggle Fullscreen">⛶</button>
+        </div>
+        <a href="/" class="back-link">← Back to Home</a>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+  }
+
+  .toggle-btn {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    padding: 0;
+  }
+
+  .toggle-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .controls {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    pointer-events: auto;
+    max-width: 300px;
+    transition:
+      transform 0.3s ease,
+      opacity 0.3s ease;
+    z-index: 99;
+  }
+
+  .controls.hidden {
+    transform: translateX(-120%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Hide controls in fullscreen */
+  :fullscreen .controls,
+  :-webkit-full-screen .controls {
+    transform: translateX(-120%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  :fullscreen .toggle-btn,
+  :-webkit-full-screen .toggle-btn {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--accent-light);
+  }
+
+  p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+  }
+
+  .control-group {
+    margin-bottom: 1.5rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent-color);
+    margin-bottom: 0.5rem;
+  }
+
+  .stats {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  button {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  button:hover {
+    background: var(--accent-light);
+  }
+
+  #fullscreen-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 1.1rem;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  #fullscreen-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .back-link {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    transition: color 0.3s;
+  }
+
+  .back-link:hover {
+    color: white;
+  }
+</style>
+
+<script>
+  const canvas = document.getElementById("simulation") as HTMLCanvasElement;
+  const ctx = canvas.getContext("2d")!;
+
+  const curveCanvas = document.createElement("canvas");
+  const curveCtx = curveCanvas.getContext("2d")!;
+
+  // Controls
+  const freqSlider = document.getElementById("freq-slider") as HTMLInputElement;
+  const ampSlider = document.getElementById("amp-slider") as HTMLInputElement;
+  const phaseSlider = document.getElementById("phase-slider") as HTMLInputElement;
+  const dampingSlider = document.getElementById("damping-slider") as HTMLInputElement;
+  const speedSlider = document.getElementById("speed-slider") as HTMLInputElement;
+  const freqValue = document.getElementById("freq-value") as HTMLSpanElement;
+  const ampValue = document.getElementById("amp-value") as HTMLSpanElement;
+  const phaseValue = document.getElementById("phase-value") as HTMLSpanElement;
+  const dampingValue = document.getElementById("damping-value") as HTMLSpanElement;
+  const speedValue = document.getElementById("speed-value") as HTMLSpanElement;
+
+  let width = window.innerWidth;
+  let height = window.innerHeight;
+
+  // Harmonograph parameters (rotary harmonograph with two pendulums)
+  let freqRatio = 2.01;
+  let ampBalance = 0.75;
+  let phaseDeg = 90;
+  let damping = 0.002;
+  let stepsPerFrame = 2;
+  let t = 0;
+  let prevX = 0;
+  let prevY = 0;
+
+  // Derived
+  let cx = 0;
+  let cy = 0;
+  let A1 = 0;
+  let A2 = 0;
+  let phi = 0;
+
+  // Pendulum display
+  let p1cx = 0, p1cy = 0;
+  let p2cx = 0, p2cy = 0;
+  let pendR = 0;
+
+  const dt = 0.02;
+  const f1 = 1;
+
+  function computeDerived() {
+    cx = width / 2;
+    cy = height / 2;
+    const size = Math.min(width, height);
+    A1 = size * 0.3;
+    A2 = ampBalance * A1;
+    phi = (phaseDeg * Math.PI) / 180;
+
+    // Pendulum display circles at the bottom
+    const spacing = size * 0.12;
+    p1cx = cx - spacing;
+    p1cy = height * 0.88;
+    p2cx = cx + spacing;
+    p2cy = height * 0.88;
+    pendR = size * 0.04;
+  }
+
+  // Rotary harmonograph: pen = sum of two circular motions with decay
+  function penPosition(t: number): { x: number; y: number } {
+    const decay = Math.exp(-damping * t);
+    return {
+      x: cx + (A1 * Math.sin(f1 * t) + A2 * Math.sin(freqRatio * t + phi)) * decay,
+      y: cy + (A1 * Math.cos(f1 * t) + A2 * Math.cos(freqRatio * t + phi)) * decay,
+    };
+  }
+
+  // Pendulum bob positions for visualization
+  function pendulumPositions(t: number) {
+    const decay = damping > 0 ? Math.exp(-damping * t) : 1;
+    const r = pendR * decay + pendR * 0.1;
+    return {
+      bob1: {
+        x: p1cx + r * Math.sin(f1 * t),
+        y: p1cy + r * Math.cos(f1 * t),
+      },
+      bob2: {
+        x: p2cx + r * Math.sin(freqRatio * t + phi),
+        y: p2cy + r * Math.cos(freqRatio * t + phi),
+      },
+    };
+  }
+
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    curveCanvas.width = width;
+    curveCanvas.height = height;
+    reset();
+  }
+
+  function reset() {
+    computeDerived();
+    t = 0;
+
+    curveCtx.fillStyle = "#000";
+    curveCtx.fillRect(0, 0, width, height);
+
+    const p0 = penPosition(0);
+    prevX = p0.x;
+    prevY = p0.y;
+  }
+
+  function animate() {
+    // Auto-restart when damped to negligible amplitude
+    if (damping > 0 && Math.exp(-damping * t) < 0.005) {
+      reset();
+    }
+
+    curveCtx.lineWidth = 1.5;
+    for (let i = 0; i < stepsPerFrame; i++) {
+      t += dt;
+      const p = penPosition(t);
+      const hue = (t * 50) % 360;
+      curveCtx.strokeStyle = `hsl(${hue}, 80%, 60%)`;
+      curveCtx.beginPath();
+      curveCtx.moveTo(prevX, prevY);
+      curveCtx.lineTo(p.x, p.y);
+      curveCtx.stroke();
+      prevX = p.x;
+      prevY = p.y;
+    }
+
+    // Composite to main canvas
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(curveCanvas, 0, 0);
+
+    // Draw pendulum circles
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(p1cx, p1cy, pendR, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(p2cx, p2cy, pendR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const pen = penPosition(t);
+    const pend = pendulumPositions(t);
+
+    // Center dots
+    ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.beginPath();
+    ctx.arc(p1cx, p1cy, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(p2cx, p2cy, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Arms from centers to bobs
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(p1cx, p1cy);
+    ctx.lineTo(pend.bob1.x, pend.bob1.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(p2cx, p2cy);
+    ctx.lineTo(pend.bob2.x, pend.bob2.y);
+    ctx.stroke();
+
+    // Rods from bobs to pen
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pend.bob1.x, pend.bob1.y);
+    ctx.lineTo(pen.x, pen.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(pend.bob2.x, pend.bob2.y);
+    ctx.lineTo(pen.x, pen.y);
+    ctx.stroke();
+
+    // Bob dots
+    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+    ctx.beginPath();
+    ctx.arc(pend.bob1.x, pend.bob1.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(pend.bob2.x, pend.bob2.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pen dot
+    ctx.beginPath();
+    ctx.arc(pen.x, pen.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+
+    requestAnimationFrame(animate);
+  }
+
+  // Slider listeners
+  freqSlider.addEventListener("input", (e) => {
+    freqRatio = parseFloat((e.target as HTMLInputElement).value);
+    freqValue.textContent = freqRatio.toFixed(2);
+    reset();
+  });
+
+  ampSlider.addEventListener("input", (e) => {
+    ampBalance = parseFloat((e.target as HTMLInputElement).value);
+    ampValue.textContent = ampBalance.toFixed(2);
+    reset();
+  });
+
+  phaseSlider.addEventListener("input", (e) => {
+    phaseDeg = parseInt((e.target as HTMLInputElement).value);
+    phaseValue.textContent = phaseDeg.toString();
+    reset();
+  });
+
+  dampingSlider.addEventListener("input", (e) => {
+    damping = parseFloat((e.target as HTMLInputElement).value);
+    dampingValue.textContent = damping.toFixed(3);
+    reset();
+  });
+
+  speedSlider.addEventListener("input", (e) => {
+    stepsPerFrame = parseInt((e.target as HTMLInputElement).value);
+    speedValue.textContent = stepsPerFrame.toString();
+  });
+
+  window.addEventListener("resize", resize);
+  resize();
+  animate();
+
+  // Reset button
+  document.getElementById("reset-btn")?.addEventListener("click", reset);
+
+  // Toggle controls visibility
+  const toggleBtn = document.getElementById("toggle-controls");
+  const controlsPanel = document.getElementById("controls-panel");
+
+  const fullscreenBtn = document.getElementById("fullscreen-btn");
+  const canvasContainer = document.querySelector(
+    ".canvas-container",
+  ) as HTMLElement;
+
+  fullscreenBtn?.addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+      canvasContainer?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  });
+
+  document.addEventListener("fullscreenchange", () => {
+    if (document.fullscreenElement) {
+      controlsPanel?.classList.add("hidden");
+      toggleBtn?.classList.remove("visible");
+    } else {
+      controlsPanel?.classList.remove("hidden");
+      toggleBtn?.classList.remove("visible");
+    }
+  });
+
+  toggleBtn?.addEventListener("click", () => {
+    controlsPanel?.classList.toggle("hidden");
+    toggleBtn?.classList.toggle("visible");
+  });
+
+  controlsPanel?.addEventListener("transitionend", () => {
+    if (controlsPanel.classList.contains("hidden") && !document.fullscreenElement) {
+      toggleBtn?.classList.add("visible");
+    }
+  });
+
+  const hideBtn = document.createElement("button");
+  hideBtn.id = "hide-controls-btn";
+  hideBtn.innerHTML = "×";
+  hideBtn.title = "Hide Controls";
+  hideBtn.style.cssText =
+    "position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.25rem 0.5rem; font-size: 1rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer;";
+  controlsPanel?.appendChild(hideBtn);
+
+  hideBtn.addEventListener("click", () => {
+    controlsPanel?.classList.add("hidden");
+    toggleBtn?.classList.add("visible");
+  });
+</script>
