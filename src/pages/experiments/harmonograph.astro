@@ -10,9 +10,7 @@ import Layout from "../../layouts/Layout.astro";
     </button>
     <div class="controls" id="controls-panel">
       <h1>Spirograph Harmonograph</h1>
-      <p>
-        Two pendulums trace decaying Lissajous-like curves.
-      </p>
+      <p>Two pendulums trace decaying Lissajous-like curves.</p>
       <div class="control-group">
         <label for="freq-slider"
           >Frequency ratio: <span id="freq-value">2.01</span></label
@@ -262,13 +260,21 @@ import Layout from "../../layouts/Layout.astro";
   // Controls
   const freqSlider = document.getElementById("freq-slider") as HTMLInputElement;
   const ampSlider = document.getElementById("amp-slider") as HTMLInputElement;
-  const phaseSlider = document.getElementById("phase-slider") as HTMLInputElement;
-  const dampingSlider = document.getElementById("damping-slider") as HTMLInputElement;
-  const speedSlider = document.getElementById("speed-slider") as HTMLInputElement;
+  const phaseSlider = document.getElementById(
+    "phase-slider",
+  ) as HTMLInputElement;
+  const dampingSlider = document.getElementById(
+    "damping-slider",
+  ) as HTMLInputElement;
+  const speedSlider = document.getElementById(
+    "speed-slider",
+  ) as HTMLInputElement;
   const freqValue = document.getElementById("freq-value") as HTMLSpanElement;
   const ampValue = document.getElementById("amp-value") as HTMLSpanElement;
   const phaseValue = document.getElementById("phase-value") as HTMLSpanElement;
-  const dampingValue = document.getElementById("damping-value") as HTMLSpanElement;
+  const dampingValue = document.getElementById(
+    "damping-value",
+  ) as HTMLSpanElement;
   const speedValue = document.getElementById("speed-value") as HTMLSpanElement;
 
   let width = window.innerWidth;
@@ -292,8 +298,10 @@ import Layout from "../../layouts/Layout.astro";
   let phi = 0;
 
   // Pendulum display
-  let p1cx = 0, p1cy = 0;
-  let p2cx = 0, p2cy = 0;
+  let p1cx = 0,
+    p1cy = 0;
+  let p2cx = 0,
+    p2cy = 0;
   let pendR = 0;
 
   const dt = 0.02;
@@ -320,8 +328,12 @@ import Layout from "../../layouts/Layout.astro";
   function penPosition(t: number): { x: number; y: number } {
     const decay = Math.exp(-damping * t);
     return {
-      x: cx + (A1 * Math.sin(f1 * t) + A2 * Math.sin(freqRatio * t + phi)) * decay,
-      y: cy + (A1 * Math.cos(f1 * t) + A2 * Math.cos(freqRatio * t + phi)) * decay,
+      x:
+        cx +
+        (A1 * Math.sin(f1 * t) + A2 * Math.sin(freqRatio * t + phi)) * decay,
+      y:
+        cy +
+        (A1 * Math.cos(f1 * t) + A2 * Math.cos(freqRatio * t + phi)) * decay,
     };
   }
 
@@ -522,7 +534,10 @@ import Layout from "../../layouts/Layout.astro";
   });
 
   controlsPanel?.addEventListener("transitionend", () => {
-    if (controlsPanel.classList.contains("hidden") && !document.fullscreenElement) {
+    if (
+      controlsPanel.classList.contains("hidden") &&
+      !document.fullscreenElement
+    ) {
       toggleBtn?.classList.add("visible");
     }
   });
