@@ -1,43 +1,49 @@
-# Astro Starter Kit: Minimal
+# Physics Experiments
 
-```sh
-npm create astro@latest -- --template minimal
-```
+A collection of small, visually driven physics and geometry simulations built with [Astro](https://astro.build). Each experiment runs on an HTML `<canvas>` and has a collapsible control panel with speed, reset and fullscreen controls.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Experiments
 
-## 🚀 Project Structure
+| Experiment | Route | Description |
+| :--- | :--- | :--- |
+| Bouncing Balls | `/experiments/bouncing-balls` | Balls collide inside a circle and spawn new balls on each collision. |
+| Circle Painter | `/experiments/circle-painter` | A bouncing ball paints the circle, switching color each time it fills. |
+| Growing Ball | `/experiments/growing-ball` | A ball grows with every bounce until it fills the whole circle. |
+| Spirograph Classic | `/experiments/spirograph` | A wheel rolling inside another traces a hypotrochoid curve. |
+| Spirograph Harmonograph | `/experiments/harmonograph` | Two damped pendulums trace decaying Lissajous-like curves. |
 
-Inside of your Astro project, you'll see the following folders and files:
+## Project structure
 
 ```text
 /
-├── public/
+├── public/                  # Static assets (favicon)
 ├── src/
+│   ├── layouts/Layout.astro # Shared page layout
+│   ├── styles/global.css    # Global styles and theme variables
 │   └── pages/
-│       └── index.astro
-└── package.json
+│       ├── index.astro      # Landing page listing all experiments
+│       └── experiments/     # One page per simulation
+├── astro.config.mjs
+└── wrangler.json            # Cloudflare deployment config (serves ./dist)
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+To add a new experiment, create a page in `src/pages/experiments/` and add a card linking to it in `src/pages/index.astro`.
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+## Development
 
-Any static assets, like images, can be placed in the `public/` directory.
+This project uses [pnpm](https://pnpm.io).
 
-## 🧞 Commands
+| Command | Action |
+| :--- | :--- |
+| `pnpm install` | Install dependencies |
+| `pnpm dev` | Start the dev server at `localhost:4321` |
+| `pnpm build` | Build the static site to `./dist/` |
+| `pnpm preview` | Preview the production build locally |
 
-All commands are run from the root of the project, from a terminal:
+## Deployment
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+The site builds to static files in `./dist/`, which `wrangler.json` serves as Cloudflare Workers static assets. After building, deploy with:
 
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+```sh
+npx wrangler deploy
+```
